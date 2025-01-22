@@ -1,5 +1,3 @@
-#include <curl/curl.h>
-#include <curl/easy.h>
 #include <regex.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,15 +6,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define MAX_URL_LEN 1024
-typedef struct Video
-{
-    char videoUrl[256];
-    char videoFileName[128];
-    char thumbUrl[256];
-    char thumbFileName[128];
-    struct Video* next;
-} Video;
+#include "videodown.h"
 
 size_t write_callback(void* ptr, size_t size, size_t nmemb, FILE* stream)
 {
@@ -24,10 +14,12 @@ size_t write_callback(void* ptr, size_t size, size_t nmemb, FILE* stream)
     return written;
 }
 
-void changeExtensionToWebp(char* filename) {
-    char* dot = strrchr(filename, '.'); 
-    if (dot != NULL) {
-        strcpy(dot, ".webp"); 
+void changeExtensionToWebp(char* filename)
+{
+    char* dot = strrchr(filename, '.');
+    if (dot != NULL)
+    {
+        strcpy(dot, ".webp");
     }
 }
 
@@ -75,20 +67,25 @@ Video videoCreate(char* videoUrl)
     return New_Video;
 }
 
-int videoDownload(char* url, Video* video) {
+int videoDownload(char* url, Video* video)
+{
     char command[MAX_URL_LEN];
     FILE* fp;
 
     snprintf(command, sizeof(command), "yt-dlp -o \"data/%%(title)s.%%(ext)s\" --get-filename %s", url);
     fp = popen(command, "r");
-    if (fp == NULL) {
+    if (fp == NULL)
+    {
         fprintf(stderr, "Failed to run command to get video filename\n");
         return 1;
     }
 
-    if (fgets(video->videoFileName, sizeof(video->videoFileName), fp) != NULL) {
+    if (fgets(video->videoFileName, sizeof(video->videoFileName), fp) != NULL)
+    {
         video->videoFileName[strcspn(video->videoFileName, "\n")] = '\0';
-    } else {
+    }
+    else
+    {
         fprintf(stderr, "Failed to retrieve video filename\n");
         pclose(fp);
         return 1;
@@ -97,15 +94,19 @@ int videoDownload(char* url, Video* video) {
 
     snprintf(command, sizeof(command), "yt-dlp --write-thumbnail --convert-thumbnails webp -o \"data/%%(title)s.%%(ext)s\" --print filename %s", url);
     fp = popen(command, "r");
-    if (fp == NULL) {
+    if (fp == NULL)
+    {
         fprintf(stderr, "Failed to run command to get thumbnail filename\n");
         return 1;
     }
 
-    if (fgets(video->thumbFileName, sizeof(video->thumbFileName), fp) != NULL) {
+    if (fgets(video->thumbFileName, sizeof(video->thumbFileName), fp) != NULL)
+    {
         video->thumbFileName[strcspn(video->thumbFileName, "\n")] = '\0';
         changeExtensionToWebp(video->thumbFileName);
-    } else {
+    }
+    else
+    {
         fprintf(stderr, "Failed to retrieve thumbnail filename\n");
         pclose(fp);
         return 1;
@@ -116,7 +117,8 @@ int videoDownload(char* url, Video* video) {
     printf("Command: %s\n", command);
 
     int result = system(command);
-    if (result > 0) {
+    if (result > 0)
+    {
         fprintf(stderr, "Command failed\n");
         return 1;
     }
@@ -124,22 +126,4 @@ int videoDownload(char* url, Video* video) {
     printf("Video saved as: %s\n", video->videoFileName);
     printf("Thumbnail saved as: %s\n", video->thumbFileName);
     return 0;
-}
-
-int main(void)
-{
-    char* link = "https://www.youtube.com/watch?v=-rFdYkshUgw";
-    Video video = videoCreate(link);
-
-    printf("Video: %s\n", video.videoUrl);
-    printf("Img: %s\n", video.thumbUrl);
-
-    if (videoDownload(video.videoUrl, &video) == 0) {
-        printf("Sucess \n");
-        printf("Thumb file name: %s\n", video.videoFileName);
-        printf("Thumb file name: %s\n", video.thumbFileName);
-    }
-    else {
-        printf("Error downloading video");
-    }
 }
