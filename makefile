@@ -1,10 +1,10 @@
 CC = gcc
 
-SRC = music.c
+SRC = music.c videodown.c
 
-OUTPUT = music
+OUTPUT = program
 
-CFLAGS = 
+CFLAGS = -Wall -g 
 LDFLAGS = -lraylib
 
 all: $(OUTPUT)

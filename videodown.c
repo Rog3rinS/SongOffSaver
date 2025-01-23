@@ -127,3 +127,15 @@ int videoDownload(char* url, Video* video)
     printf("Thumbnail saved as: %s\n", video->thumbFileName);
     return 0;
 }
+
+Video videoNewDownload(char* videoUrl)
+{
+    Video createdVideo = videoCreate(videoUrl);
+    if ((videoDownload(videoUrl, &createdVideo)) != 0)
+    {
+        printf("Video download failed! \n");
+        return (Video){0};
+    }
+
+    return createdVideo;
+}

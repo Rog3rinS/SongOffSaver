@@ -1,11 +1,14 @@
 #include <curl/curl.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 #include "raylib.h"
 #include "videodown.h"
+
+//need to add key bind, like c-v and c-c, and so that the text doesnt get out of the box
 
 void soundTime(Music music, struct screenSize screen)
 {
@@ -18,14 +21,15 @@ void soundTime(Music music, struct screenSize screen)
     DrawText(timeInfo, (screen.Width - textWidth) / 2, screen.Heigth - 100, 20, DARKGRAY);
 }
 
-Rectangle textbox(struct screenSize screen, char* url, int16_t* letterCount, int16_t* framesCounter, bool* mouseOnText, bool* isFocused)
+Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCount, int16_t* framesCounter, bool* mouseOnText, bool* isFocused)
 {
-
-    Rectangle textBox = {screen.Width / 2.0f - 100, 180, 225, 50};
+    //drawing, and textBox
+    Rectangle textBox = {screen.Width / 2.0f - 250, screen.Heigth / 2.0f, 500, 30};
 
     if (CheckCollisionPointRec(GetMousePosition(), textBox))
     {
         *mouseOnText = true;
+        SetMouseCursor(MOUSE_CURSOR_IBEAM);
     }
     else
     {
@@ -40,6 +44,8 @@ Rectangle textbox(struct screenSize screen, char* url, int16_t* letterCount, int
         *isFocused = false;
     }
 
+    DrawRectangleRec(textBox, LIGHTGRAY);
+    DrawRectangleLines((int)textBox.x, (int)textBox.y, (int)textBox.width, (int)textBox.height, isFocused ? RED : DARKGRAY);
     // doing mouse stuff
     if (*isFocused)
     {
@@ -63,6 +69,41 @@ Rectangle textbox(struct screenSize screen, char* url, int16_t* letterCount, int
                 *letterCount = 0;
             url[*letterCount] = '\0';
         }
+
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_V))
+        {
+            const char* clipboardText = GetClipboardText();
+            if (clipboardText != NULL)
+            {
+                strncpy(url, clipboardText, MAX_URL_LEN - 1);
+                url[MAX_URL_LEN - 1] = '\0';
+                *letterCount = strlen(url);
+            }
+        }
+
+        //not good, but it works (actually its very shity)
+        if (*letterCount > 46)
+        {
+            int maxVisibleChars = 46;
+
+            int startPos = *letterCount - maxVisibleChars;
+            if (startPos < 0)
+                startPos = 0;
+
+            int visibleChars = *letterCount - startPos;
+            if (visibleChars > maxVisibleChars)
+                visibleChars = maxVisibleChars;
+
+            char tempBuffer[maxVisibleChars + 1];
+            strncpy(tempBuffer, url + startPos, visibleChars);
+            tempBuffer[visibleChars] = '\0';
+
+            DrawText(tempBuffer, textBox.x + 5, textBox.y + 5, 20, BLACK);
+        }
+        else
+        {
+            DrawText(url, textBox.x + 5, textBox.y + 5, 20, BLACK);
+        }
     }
     else
     {
@@ -77,6 +118,7 @@ Rectangle textbox(struct screenSize screen, char* url, int16_t* letterCount, int
     {
         (*framesCounter) = 0;
     }
+
 
     return textBox;
 }
@@ -94,6 +136,7 @@ int main(void)
     int16_t framesCounter = 0;
     bool mouseOnText = false;
     bool isFocused = false;
+    printf("someshitisgoingon");
 
     SetTargetFPS(60);
 
@@ -105,13 +148,8 @@ int main(void)
     //main loop
     while (!WindowShouldClose())
     {
-        // update the music to stream
         UpdateMusicStream(music);
 
-        // Checking the mouse collision
-        Rectangle textBox = textbox(screen1, url, &letterCount, &framesCounter, &mouseOnText, &isFocused);
-
-        //Pause and resume keys
         if (IsKeyPressed(KEY_SPACE))
         {
             if (IsMusicStreamPlaying(music))
@@ -124,29 +162,17 @@ int main(void)
             }
         }
 
+
         //Draw -------------------------
         BeginDrawing();
-
-        //background
         ClearBackground(RAYWHITE);
 
-        //mouse box
-        DrawRectangleRec(textBox, LIGHTGRAY);
-        DrawRectangleLines((int)textBox.x, (int)textBox.y, (int)textBox.width, (int)textBox.height, isFocused ? RED : DARKGRAY);
+        createTextBox(screen1, url, &letterCount, &framesCounter, &mouseOnText, &isFocused);
 
-        DrawText(url, (int)textBox.x + 5, (int)textBox.y + 8, 40, MAROON);
-
-        if (isFocused && ((framesCounter / 20) % 2 == 0))
-        {
-            DrawText("_", (int)textBox.x + 8 + MeasureText(url, 40), (int)textBox.y + 12, 40, MAROON);
-        }
-
-        //sound time
         soundTime(music, screen1);
 
         EndDrawing();
     }
-
 
     return 0;
 }

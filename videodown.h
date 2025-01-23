@@ -23,10 +23,6 @@ typedef struct Video
     struct Video* next;
 } Video;
 
-size_t write_callback(void* ptr, size_t size, size_t nmemb, FILE* stream);
-void changeExtensionToWebp(char* filename);
-char* idVideo(char* videoUrl);
-Video videoCreate(char* videoUrl);
-int videoDownload(char* url, Video* video);
+Video videoNewDownload(char* videoUrl);
 
 #endif
