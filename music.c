@@ -47,7 +47,6 @@ Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCoun
     DrawRectangleRec(textBox, LIGHTGRAY);
     DrawRectangleLines((int)textBox.x, (int)textBox.y, (int)textBox.width, (int)textBox.height, isFocused ? RED : DARKGRAY);
 
-    int startPos = 0;
     // doing mouse stuff
     if (*isFocused)
     {
@@ -132,11 +131,21 @@ Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCoun
     else
     {
         SetMouseCursor(MOUSE_CURSOR_DEFAULT);
-        const int maxVisibleChars = 45;
-        startPos = (*letterCount > maxVisibleChars)
-                       ? *letterCount - maxVisibleChars
-                       : 0;
-        DrawText(url + startPos, textBox.x + 5, textBox.y + 5, 20, BLACK);
+        const int Padding = 5;
+        const int maxWidth = textBox.width - 10;
+        int urlWidth = MeasureText(url, 20);
+        int startPos = 0;
+
+        if (urlWidth > maxWidth) {
+          int offset = 0;
+          while (MeasureText(url + offset, 20) > maxWidth) {
+            offset++;
+          }
+
+          startPos = offset;
+        }
+
+        DrawText(url + startPos, textBox.x + Padding, textBox.y + Padding, 20, BLACK);
     }
 
     if (*isFocused)
