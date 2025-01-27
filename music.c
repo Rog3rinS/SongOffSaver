@@ -46,6 +46,8 @@ Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCoun
 
     DrawRectangleRec(textBox, LIGHTGRAY);
     DrawRectangleLines((int)textBox.x, (int)textBox.y, (int)textBox.width, (int)textBox.height, isFocused ? RED : DARKGRAY);
+
+    int startPos = 0;
     // doing mouse stuff
     if (*isFocused)
     {
@@ -62,12 +64,25 @@ Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCoun
             }
             key = GetCharPressed();
         }
-        if (IsKeyPressed(KEY_BACKSPACE))
+
+        const int backspaceDelay = 30;
+        static int backspaceFrames = 0;
+
+        if (IsKeyDown(KEY_BACKSPACE))
         {
-            (*letterCount)--;
-            if (*letterCount < 0)
-                *letterCount = 0;
-            url[*letterCount] = '\0';
+            if (backspaceFrames == 0 || backspaceFrames >= backspaceDelay)
+            {
+              if (*letterCount > 0)
+              {
+                (*letterCount)--;
+                url[*letterCount] = '\0';
+              }
+              backspaceFrames = (backspaceFrames == 0) ? 1 : backspaceFrames;
+            } else {
+              backspaceFrames++;
+            }
+        } else {
+          backspaceFrames = 0;
         }
 
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_V))
@@ -82,32 +97,46 @@ Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCoun
         }
 
         //not good, but it works (actually its very shity)
-        if (*letterCount > 46)
-        {
-            int maxVisibleChars = 46;
+        const int Padding = 5;
+        const int maxWidth = textBox.width - 10;
+        int urlWidth = MeasureText(url, 20);
+        int startPos = 0;
 
-            int startPos = *letterCount - maxVisibleChars;
-            if (startPos < 0)
-                startPos = 0;
+        if (urlWidth > maxWidth) {
+          int offset = 0;
+          while (MeasureText(url + offset, 20) > maxWidth) {
+            offset++;
+          }
 
-            int visibleChars = *letterCount - startPos;
-            if (visibleChars > maxVisibleChars)
-                visibleChars = maxVisibleChars;
-
-            char tempBuffer[maxVisibleChars + 1];
-            strncpy(tempBuffer, url + startPos, visibleChars);
-            tempBuffer[visibleChars] = '\0';
-
-            DrawText(tempBuffer, textBox.x + 5, textBox.y + 5, 20, BLACK);
+          startPos = offset;
         }
-        else
+
+        DrawText(url + startPos, textBox.x + Padding, textBox.y + Padding, 20, BLACK);
+
+        if (*letterCount < MAX_URL_LEN) {
+          if (((*framesCounter / 20) % 2) == 0) {
+                int visibleTextWidth = MeasureText(url, 20);
+                int cursorX = textBox.x + 5 + visibleTextWidth;
+                if (cursorX < textBox.x + textBox.width - 10) {
+                  DrawText("|", cursorX, (int)textBox.y + 5, 20, MAROON);
+                }
+
+          }
+        }
+
+        if (IsKeyDown(KEY_ENTER))
         {
-            DrawText(url, textBox.x + 5, textBox.y + 5, 20, BLACK);
+          videoNewDownload(url);
         }
     }
     else
     {
         SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+        const int maxVisibleChars = 45;
+        startPos = (*letterCount > maxVisibleChars)
+                       ? *letterCount - maxVisibleChars
+                       : 0;
+        DrawText(url + startPos, textBox.x + 5, textBox.y + 5, 20, BLACK);
     }
 
     if (*isFocused)

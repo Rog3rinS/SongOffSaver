@@ -5,7 +5,7 @@ SRC = music.c videodown.c
 OUTPUT = program
 
 CFLAGS = -Wall -g 
-LDFLAGS = -lraylib
+LDFLAGS = -lraylib -lm  # Add -lm to link the math library
 
 all: $(OUTPUT)
 
