@@ -21,9 +21,8 @@ void soundTime(Music music, struct screenSize screen)
     DrawText(timeInfo, (screen.Width - textWidth) / 2, screen.Heigth - 100, 20, DARKGRAY);
 }
 
-Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCount, int16_t* framesCounter, bool* mouseOnText, bool* isFocused)
+Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCount, int16_t* framesCounter, bool* mouseOnText, bool* isFocused, int* cursorPos)
 {
-    //drawing, and textBox
     Rectangle textBox = {screen.Width / 2.0f - 250, screen.Heigth / 2.0f, 500, 30};
 
     if (CheckCollisionPointRec(GetMousePosition(), textBox))
@@ -45,20 +44,23 @@ Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCoun
     }
 
     DrawRectangleRec(textBox, LIGHTGRAY);
-    DrawRectangleLines((int)textBox.x, (int)textBox.y, (int)textBox.width, (int)textBox.height, isFocused ? RED : DARKGRAY);
+    DrawRectangleLines((int)textBox.x, (int)textBox.y, (int)textBox.width, (int)textBox.height, *isFocused ? RED : DARKGRAY);
 
-    // doing mouse stuff
     if (*isFocused)
     {
         SetMouseCursor(MOUSE_CURSOR_IBEAM);
-
+        const int Padding = 5;
+        const int maxWidth = textBox.width - 10;
         int key = GetCharPressed();
+
+
         while (key > 0)
         {
             if ((key >= 32) && (key <= 125) && (*letterCount < (int16_t)MAX_URL_LEN))
             {
-                url[*letterCount] = (char)key;  // casting just in case
-                url[*letterCount + 1] = '\0';   // no segfault here buddy
+                url[*cursorPos] = (char)key;
+                url[*cursorPos + 1] = '\0';
+                (*cursorPos)++;
                 (*letterCount)++;
             }
             key = GetCharPressed();
@@ -71,20 +73,23 @@ Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCoun
         {
             if (backspaceFrames == 0 || backspaceFrames >= backspaceDelay)
             {
-              if (*letterCount > 0)
-              {
+              if (*cursorPos < *letterCount) {
+                for (int i = *cursorPos - 1; i < *letterCount - 1; i++) {
+                  url[i] = url[i + 1]; // Shift characters to the left
+                }
                 (*letterCount)--;
+                (*cursorPos)--;
                 url[*letterCount] = '\0';
               }
-              backspaceFrames = (backspaceFrames == 0) ? 1 : backspaceFrames;
+                backspaceFrames = (backspaceFrames == 0) ? 1 : backspaceFrames;
             } else {
-              backspaceFrames++;
+                backspaceFrames++;
             }
         } else {
           backspaceFrames = 0;
         }
 
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_V))
+        if (IsKeyPressed(KEY_V) && IsKeyDown(KEY_LEFT_CONTROL))
         {
             const char* clipboardText = GetClipboardText();
             if (clipboardText != NULL)
@@ -92,40 +97,78 @@ Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCoun
                 strncpy(url, clipboardText, MAX_URL_LEN - 1);
                 url[MAX_URL_LEN - 1] = '\0';
                 *letterCount = strlen(url);
+                *cursorPos = *letterCount;
             }
         }
 
-        //not good, but it works (actually its very shity)
-        const int Padding = 5;
-        const int maxWidth = textBox.width - 10;
-        int urlWidth = MeasureText(url, 20);
-        int startPos = 0;
+        const int arrowdelay = 100;
+        static int arrowframes = 0;
 
-        if (urlWidth > maxWidth) {
-          int offset = 0;
-          while (MeasureText(url + offset, 20) > maxWidth) {
-            offset++;
+        const int arrowdelay1 = 100;
+        static int arrowframes1 = 0;
+
+        if (IsKeyDown(KEY_LEFT) && *cursorPos > 0) {
+          if (arrowframes1 == 0 || arrowframes1 >= arrowdelay1) {
+            (*cursorPos)--;
+            arrowframes1 = 1;
+          } else {
+            arrowframes1++;
           }
-
-          startPos = offset;
+        } else {
+          arrowframes1 = 0;
         }
 
+        if (IsKeyDown(KEY_RIGHT) && *cursorPos < *letterCount) {
+          if (arrowframes == 0 || arrowframes >= arrowdelay) {
+            (*cursorPos)++;
+            arrowframes = 1;
+          } else {
+            arrowframes++;
+          }
+        } else {
+          arrowframes = 0;
+        }
+
+        int startPos = 0;
+        if (MeasureText(url, 20) > maxWidth) {
+          while (MeasureText(url + startPos, 20) > maxWidth) {
+            startPos++;
+          }
+        }
+
+        int urlWidth = MeasureText(url, 20);
+        if (urlWidth > maxWidth) {
+            int offset = 0;
+            while (MeasureText(url + offset, 20) > maxWidth) {
+                offset++;
+            }
+            startPos = offset;
+        }
+
+        int cursorX = textBox.x + Padding + MeasureText(url + startPos, 20) -
+                      MeasureText(url + *cursorPos, 20);
+
+        if (cursorX < textBox.x + Padding) {
+          while (cursorX < textBox.x + Padding && startPos > 0) {
+            startPos--;
+            cursorX = textBox.x + Padding + MeasureText(url + startPos, 20) -
+                      MeasureText(url + *cursorPos, 20);
+          }
+        }
+
+        //THIS FUCKING PIECE OF SHIT DOESNT WORK WHEN THE CURSOR GOES TO THE LEFT
         DrawText(url + startPos, textBox.x + Padding, textBox.y + Padding, 20, BLACK);
 
-        if (*letterCount < MAX_URL_LEN) {
-          if (((*framesCounter / 20) % 2) == 0) {
-                int visibleTextWidth = MeasureText(url, 20);
-                int cursorX = textBox.x + 5 + visibleTextWidth;
-                if (cursorX < textBox.x + textBox.width - 10) {
-                  DrawText("|", cursorX, (int)textBox.y + 5, 20, MAROON);
-                }
-
+        if (((*framesCounter / 30) % 2) == 0) {
+          if (cursorX >= textBox.x + Padding &&
+              cursorX < textBox.x + textBox.width - 10) {
+            DrawText("|", cursorX, (int)textBox.y + 5, 20, MAROON);
           }
         }
 
         if (IsKeyDown(KEY_ENTER))
         {
-          videoNewDownload(url);
+            videoNewDownload(url);
         }
     }
     else
@@ -137,12 +180,11 @@ Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCoun
         int startPos = 0;
 
         if (urlWidth > maxWidth) {
-          int offset = 0;
-          while (MeasureText(url + offset, 20) > maxWidth) {
-            offset++;
-          }
-
-          startPos = offset;
+            int offset = 0;
+            while (MeasureText(url + offset, 20) > maxWidth) {
+                offset++;
+            }
+            startPos = offset;
         }
 
         DrawText(url + startPos, textBox.x + Padding, textBox.y + Padding, 20, BLACK);
@@ -156,7 +198,6 @@ Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCoun
     {
         (*framesCounter) = 0;
     }
-
 
     return textBox;
 }
@@ -175,6 +216,7 @@ int main(void)
     bool mouseOnText = false;
     bool isFocused = false;
     printf("someshitisgoingon");
+    int cursorPos = 0;
 
     SetTargetFPS(60);
 
@@ -205,7 +247,7 @@ int main(void)
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        createTextBox(screen1, url, &letterCount, &framesCounter, &mouseOnText, &isFocused);
+        createTextBox(screen1, url, &letterCount, &framesCounter, &mouseOnText, &isFocused, &cursorPos);
 
         soundTime(music, screen1);
 
