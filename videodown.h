@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "raylib.h"
+
 #define MAX_URL_LEN 1024
 
 typedef struct screenSize
@@ -21,8 +23,15 @@ typedef struct Video
     char thumbUrl[256];
     char thumbFileName[128];
     struct Video* next;
+    struct Video* prev;
 } Video;
 
-Video videoNewDownload(char* videoUrl);
+typedef struct VideoList {
+  Video *head;
+  Video *tail;
+} VideoList;
+
+Video* videoNewDownload(char* videoUrl);
+//    Rectangle createVideoBox();
 
 #endif

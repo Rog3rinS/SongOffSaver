@@ -8,7 +8,7 @@
 #include "raylib.h"
 #include "videodown.h"
 
-//need to add key bind, like c-v and c-c, and so that the text doesnt get out of the box
+//have change someshit to make the right textbox overflow not to happen, and make so that a text appear to say what to typein
 
 void soundTime(Music music, struct screenSize screen)
 {
@@ -23,7 +23,8 @@ void soundTime(Music music, struct screenSize screen)
 
 Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCount, int16_t* framesCounter, bool* mouseOnText, bool* isFocused, int* cursorPos)
 {
-    Rectangle textBox = {screen.Width / 2.0f - 250, screen.Heigth / 2.0f, 500, 30};
+    Rectangle textBox = {screen.Width / 2.0f - 250, screen.Heigth - 50, 500, 30};
+    
 
     if (CheckCollisionPointRec(GetMousePosition(), textBox))
     {
@@ -69,22 +70,20 @@ Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCoun
         const int backspaceDelay = 30;
         static int backspaceFrames = 0;
 
-        if (IsKeyDown(KEY_BACKSPACE))
-        {
-            if (backspaceFrames == 0 || backspaceFrames >= backspaceDelay)
-            {
-              if (*cursorPos < *letterCount) {
-                for (int i = *cursorPos - 1; i < *letterCount - 1; i++) {
-                  url[i] = url[i + 1]; // Shift characters to the left
-                }
-                (*letterCount)--;
-                (*cursorPos)--;
-                url[*letterCount] = '\0';
+        if (IsKeyDown(KEY_BACKSPACE)) {
+          if (backspaceFrames == 0 || backspaceFrames >= backspaceDelay) {
+            if (*cursorPos > 0) {
+              for (int i = *cursorPos - 1; i < *letterCount; i++) {
+                url[i] = url[i + 1];
               }
-                backspaceFrames = (backspaceFrames == 0) ? 1 : backspaceFrames;
-            } else {
-                backspaceFrames++;
+              (*cursorPos)--;
+              (*letterCount)--;
+              url[*letterCount] = '\0';
             }
+            backspaceFrames = (backspaceFrames == 0) ? 1 : backspaceFrames;
+          } else {
+            backspaceFrames++;
+          }
         } else {
           backspaceFrames = 0;
         }

@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "raylib.h"
 #include "videodown.h"
 
 size_t write_callback(void* ptr, size_t size, size_t nmemb, FILE* stream)
@@ -52,16 +53,35 @@ char* idVideo(char* videoUrl)
     return NULL;
 }
 
-Video videoCreate(char* videoUrl)
+Video* videoCreate(char* videoUrl, VideoList* list)
 {
-    Video New_Video;
+  Video *New_Video = (Video *)malloc(sizeof(Video));
+  if (!New_Video) {
+    return NULL;
+  }
 
-    char* videoId = idVideo(videoUrl);
+  char *videoId = idVideo(videoUrl);
+  if (!videoId) {
+    free(New_Video);
+    return NULL;
+  }
 
-    snprintf(New_Video.videoUrl, sizeof(New_Video.videoUrl), "%s", videoUrl);
-    snprintf(New_Video.thumbUrl, sizeof(New_Video.thumbUrl), "https://img.youtube.com/vi/%s/maxresdefault.jpg", videoId);
+  if (list->head == NULL) {
+    list->head = New_Video;
+    list->tail = New_Video;
+    snprintf(New_Video->videoUrl, sizeof(New_Video->videoUrl), "%s", videoUrl);
+    snprintf(New_Video->thumbUrl, sizeof(New_Video->thumbUrl),
+             "https://img.youtube.com/vi/%s/maxresdefault.jpg", videoId);
+    New_Video->prev = NULL;
+  } else {
+    snprintf(New_Video->videoUrl, sizeof(New_Video->videoUrl), "%s", videoUrl);
+    snprintf(New_Video->thumbUrl, sizeof(New_Video->thumbUrl),
+             "https://img.youtube.com/vi/%s/maxresdefault.jpg", videoId);
+    New_Video->next = NULL;
+    list->tail->next = New_Video;
+    list->tail = New_Video;
+  }
 
-    New_Video.next = NULL;
     free(videoId);
 
     return New_Video;
@@ -128,14 +148,32 @@ int videoDownload(char* url, Video* video)
     return 0;
 }
 
-Video videoNewDownload(char* videoUrl)
+Video* videoNewDownload(char* videoUrl)
 {
-    Video createdVideo = videoCreate(videoUrl);
-    if ((videoDownload(videoUrl, &createdVideo)) != 0)
-    {
-        printf("Video download failed! \n");
-        return (Video){0};
+  VideoList list = {0};
+  Video *createdVideo = videoCreate(videoUrl, &list);
+  if ((videoDownload(videoUrl, createdVideo)) != 0) {
+    printf("Video download failed! \n");
+    if (createdVideo) {
+      free(createdVideo);
     }
+    return NULL;
+  }
 
-    return createdVideo;
+  printf("%s\n", createdVideo->videoFileName);
+  printf("%s\n", createdVideo->videoUrl);
+  printf("%s\n", createdVideo->thumbUrl);
+  printf("%s\n", createdVideo->thumbFileName);
+  return createdVideo;
 }
+
+//lets say that each video is an object, what i need to do with all these objects 
+
+//   void VideoDisplayer()
+//   Rectangle createVideoBox() {
+//
+//     Rectangle videoBox = {0, 0, 250, 200};
+//     DrawRectangleRec(videoBox, BLACK);
+//
+//     return videoBox;
+//   }
