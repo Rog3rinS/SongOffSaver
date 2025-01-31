@@ -8,7 +8,36 @@
 #include "raylib.h"
 #include "videodown.h"
 
+//only works with one this far
+// void freeVideoList(VideoList* list) {
+//     if (!list) {
+//         return;
+//     }
+//
+//     Video* current = list->head;
+//     while (current != NULL) {
+//         Video* next = current->next;
+//         free(current);
+//         current = next;
+//     }
+//
+//     free(list);
+// }
 //have change someshit to make the right textbox overflow not to happen, and make so that a text appear to say what to typein
+void VideoDisplayer(VideoList* list) {
+
+  int HvideoBox = 0;
+  int WvideoBox = 0;
+  for (int i = 0; i < 4; i++) {
+    HvideoBox = 0;
+    for (Video *j = list->head; j != NULL; j = j->next) {
+      Rectangle videoBox = {HvideoBox, WvideoBox, 250, 200};
+      DrawRectangleRec(videoBox, BLACK);
+      HvideoBox = HvideoBox + 30;
+    }
+    WvideoBox = WvideoBox + 30;
+    }
+}
 
 void soundTime(Music music, struct screenSize screen)
 {
@@ -21,7 +50,7 @@ void soundTime(Music music, struct screenSize screen)
     DrawText(timeInfo, (screen.Width - textWidth) / 2, screen.Heigth - 100, 20, DARKGRAY);
 }
 
-Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCount, int16_t* framesCounter, bool* mouseOnText, bool* isFocused, int* cursorPos)
+Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCount, int16_t* framesCounter, bool* mouseOnText, bool* isFocused, int* cursorPos, VideoList** videoList)
 {
     Rectangle textBox = {screen.Width / 2.0f - 250, screen.Heigth - 50, 500, 30};
     
@@ -167,7 +196,7 @@ Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCoun
 
         if (IsKeyDown(KEY_ENTER))
         {
-            videoNewDownload(url);
+          *videoList = videoNewDownload(url);
         }
     }
     else
@@ -216,6 +245,7 @@ int main(void)
     bool isFocused = false;
     printf("someshitisgoingon");
     int cursorPos = 0;
+    VideoList* videoList = NULL;
 
     SetTargetFPS(60);
 
@@ -246,7 +276,11 @@ int main(void)
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        createTextBox(screen1, url, &letterCount, &framesCounter, &mouseOnText, &isFocused, &cursorPos);
+        createTextBox(screen1, url, &letterCount, &framesCounter, &mouseOnText, &isFocused, &cursorPos, &videoList);
+
+        if (videoList) {
+          VideoDisplayer(videoList);
+        }
 
         soundTime(music, screen1);
 

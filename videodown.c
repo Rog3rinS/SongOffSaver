@@ -66,6 +66,7 @@ Video* videoCreate(char* videoUrl, VideoList* list)
     return NULL;
   }
 
+  memset(New_Video, 0, sizeof(Video));
   if (list->head == NULL) {
     list->head = New_Video;
     list->tail = New_Video;
@@ -82,8 +83,8 @@ Video* videoCreate(char* videoUrl, VideoList* list)
     list->tail = New_Video;
   }
 
-    free(videoId);
 
+    free(videoId);
     return New_Video;
 }
 
@@ -148,32 +149,37 @@ int videoDownload(char* url, Video* video)
     return 0;
 }
 
-Video* videoNewDownload(char* videoUrl)
+VideoList* videoNewDownload(char* videoUrl)
 {
-  VideoList list = {0};
-  Video *createdVideo = videoCreate(videoUrl, &list);
-  if ((videoDownload(videoUrl, createdVideo)) != 0) {
-    printf("Video download failed! \n");
-    if (createdVideo) {
-      free(createdVideo);
+  VideoList *list = (VideoList *)malloc(sizeof(VideoList));
+    if (!list) {
+      printf("memmory allocation failed\n");
+      return NULL;
     }
-    return NULL;
-  }
 
-  printf("%s\n", createdVideo->videoFileName);
-  printf("%s\n", createdVideo->videoUrl);
-  printf("%s\n", createdVideo->thumbUrl);
-  printf("%s\n", createdVideo->thumbFileName);
-  return createdVideo;
+    list->head = NULL;
+    list->tail = NULL;
+
+    Video *createdVideo = videoCreate(videoUrl, list);
+    if (!createdVideo) {
+      printf("Video creation failed!\n");
+      free(list);
+      return NULL;
+    }
+
+    if (videoDownload(videoUrl, createdVideo) != 0) {
+      printf("Video download failed!\n");
+      free(createdVideo);
+      free(list);
+      return NULL;
+    }
+
+    Video *temp;
+    for (temp = list->head; temp != NULL; temp = temp->next) {
+      printf("name: %s\n", temp->videoFileName);
+    }
+  return list;
 }
 
 //lets say that each video is an object, what i need to do with all these objects 
 
-//   void VideoDisplayer()
-//   Rectangle createVideoBox() {
-//
-//     Rectangle videoBox = {0, 0, 250, 200};
-//     DrawRectangleRec(videoBox, BLACK);
-//
-//     return videoBox;
-//   }
