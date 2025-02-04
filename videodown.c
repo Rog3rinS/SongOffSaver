@@ -6,22 +6,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "raylib.h"
 #include "videodown.h"
 
-size_t write_callback(void* ptr, size_t size, size_t nmemb, FILE* stream)
-{
-    size_t written = fwrite(ptr, size, nmemb, stream);
-    return written;
-}
 
-void changeExtensionToWebp(char* filename)
-{
-    char* dot = strrchr(filename, '.');
-    if (dot != NULL)
-    {
-        strcpy(dot, ".webp");
-    }
+size_t write_callback(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+  size_t written = fwrite(ptr, size, nmemb, stream);
+  return written;
 }
 
 char* idVideo(char* videoUrl)
@@ -51,6 +41,15 @@ char* idVideo(char* videoUrl)
 
     regfree(&regex);
     return NULL;
+}
+
+void changeExtensionToPng(char* filename)
+{
+    char* dot = strrchr(filename, '.');
+    if (dot != NULL)
+    {
+        strcpy(dot, ".png");
+    }
 }
 
 Video* videoCreate(char* videoUrl, VideoList* list)
@@ -87,59 +86,50 @@ Video* videoCreate(char* videoUrl, VideoList* list)
     return New_Video;
 }
 
-int videoDownload(char* url, Video* video)
-{
+int videoDownload(char* url, Video* video) {
     char command[MAX_URL_LEN];
     FILE* fp;
 
-    snprintf(command, sizeof(command), "yt-dlp -o \"data/%%(title)s.%%(ext)s\" --get-filename %s", url);
+    snprintf(command, sizeof(command), "yt-dlp -o \"data/%%(title)s.%%(ext)s\" --get-filename \"%s\"", url);
     fp = popen(command, "r");
-    if (fp == NULL)
-    {
+    if (fp == NULL) {
         fprintf(stderr, "Failed to run command to get video filename\n");
         return 1;
     }
 
-    if (fgets(video->videoFileName, sizeof(video->videoFileName), fp) != NULL)
-    {
-        video->videoFileName[strcspn(video->videoFileName, "\n")] = '\0';
-    }
-    else
-    {
+    if (fgets(video->videoFileName, sizeof(video->videoFileName), fp) != NULL) {
+        video->videoFileName[strcspn(video->videoFileName, "\n")] = '\0'; // Remove newline
+    } else {
         fprintf(stderr, "Failed to retrieve video filename\n");
         pclose(fp);
         return 1;
     }
     pclose(fp);
 
-    snprintf(command, sizeof(command), "yt-dlp --write-thumbnail --convert-thumbnails webp -o \"data/%%(title)s.%%(ext)s\" --print filename %s", url);
+    snprintf(command, sizeof(command), "yt-dlp --write-thumbnail --convert-thumbnails png -o \"data/%%(title)s.%%(ext)s\" --print filename \"%s\"", url);
     fp = popen(command, "r");
-    if (fp == NULL)
-    {
+    if (fp == NULL) {
         fprintf(stderr, "Failed to run command to get thumbnail filename\n");
         return 1;
     }
 
-    if (fgets(video->thumbFileName, sizeof(video->thumbFileName), fp) != NULL)
-    {
-        video->thumbFileName[strcspn(video->thumbFileName, "\n")] = '\0';
-        changeExtensionToWebp(video->thumbFileName);
-    }
-    else
-    {
+    if (fgets(video->thumbFileName, sizeof(video->thumbFileName), fp) != NULL) {
+        video->thumbFileName[strcspn(video->thumbFileName, "\n")] = '\0'; // Remove newline
+        changeExtensionToPng(video->thumbFileName);
+    } else {
         fprintf(stderr, "Failed to retrieve thumbnail filename\n");
         pclose(fp);
         return 1;
     }
     pclose(fp);
 
-    snprintf(command, sizeof(command), "yt-dlp -o \"data/%%(title)s.%%(ext)s\" --write-thumbnail --convert-thumbnails webp -o \"data/%%(title)s.%%(ext)s\" %s", url);
-    printf("Command: %s\n", command);
+    // Download the video and thumbnail
+    snprintf(command, sizeof(command), "yt-dlp -o \"data/%%(title)s.%%(ext)s\" --write-thumbnail --convert-thumbnails png \"%s\"", url);
+    printf("Downloading video and thumbnail: %s\n", command);
 
     int result = system(command);
-    if (result > 0)
-    {
-        fprintf(stderr, "Command failed\n");
+    if (result != 0) {
+        fprintf(stderr, "Failed to download video or thumbnail\n");
         return 1;
     }
 

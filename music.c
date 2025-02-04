@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <math.h>
 
 #include "raylib.h"
 #include "videodown.h"
@@ -26,20 +27,33 @@ void freeVideoList(VideoList *list) {
 }
 
 void VideoDisplayer(VideoList *list) {
-    if (!list || !list->head) return; 
+    if (!list || !list->head) return;
 
     int HvideoBox = 0;
     int WvideoBox = 0;
     int col = 0;
 
     for (Video *vid = list->head; vid != NULL; vid = vid->next) {
+        printf("Loading image: %s\n", vid->thumbFileName);
+
         Rectangle videoBox = {WvideoBox, HvideoBox, 250, 200};
         DrawRectangleRec(videoBox, BLACK);
+
+        if (strlen(vid->thumbFileName) > 0) {
+            Texture2D thumbnail = LoadTexture(vid->thumbFileName);
+            if (thumbnail.width == 0 || thumbnail.height == 0) {
+                printf("Failed to create texture from image: %s\n", vid->thumbFileName);
+                continue;
+            }
+
+          DrawTexture(thumbnail, 0, 0, WHITE);
+        }
+
         WvideoBox += 260;
-        if (++col == 4) {
+        if (++col == 4) {  
             col = 0;
             WvideoBox = 0;
-            HvideoBox += 210;
+            HvideoBox += 210; 
         }
     }
 }
