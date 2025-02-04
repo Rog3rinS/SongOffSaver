@@ -31,6 +31,6 @@ typedef struct VideoList {
   Video *tail;
 } VideoList;
 
-VideoList* videoNewDownload(char* videoUrl);
+VideoList* videoNewDownload(char* videoUrl, VideoList* list);
 
 #endif

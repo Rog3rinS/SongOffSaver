@@ -83,7 +83,6 @@ Video* videoCreate(char* videoUrl, VideoList* list)
     list->tail = New_Video;
   }
 
-
     free(videoId);
     return New_Video;
 }
@@ -149,17 +148,8 @@ int videoDownload(char* url, Video* video)
     return 0;
 }
 
-VideoList* videoNewDownload(char* videoUrl)
+VideoList* videoNewDownload(char* videoUrl, VideoList* list)
 {
-  VideoList *list = (VideoList *)malloc(sizeof(VideoList));
-    if (!list) {
-      printf("memmory allocation failed\n");
-      return NULL;
-    }
-
-    list->head = NULL;
-    list->tail = NULL;
-
     Video *createdVideo = videoCreate(videoUrl, list);
     if (!createdVideo) {
       printf("Video creation failed!\n");
@@ -174,9 +164,10 @@ VideoList* videoNewDownload(char* videoUrl)
       return NULL;
     }
 
-    Video *temp;
-    for (temp = list->head; temp != NULL; temp = temp->next) {
+    Video *temp = list->head;
+    while (temp != NULL) {
       printf("name: %s\n", temp->videoFileName);
+      temp = temp->next;
     }
   return list;
 }

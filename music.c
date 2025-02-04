@@ -1,6 +1,7 @@
 #include <curl/curl.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -9,61 +10,61 @@
 #include "videodown.h"
 
 //only works with one this far
-// void freeVideoList(VideoList* list) {
-//     if (!list) {
-//         return;
-//     }
-//
-//     Video* current = list->head;
-//     while (current != NULL) {
-//         Video* next = current->next;
-//         free(current);
-//         current = next;
-//     }
-//
-//     free(list);
-// }
-//have change someshit to make the right textbox overflow not to happen, and make so that a text appear to say what to typein
-void VideoDisplayer(VideoList* list) {
+void freeVideoList(VideoList *list) {
+  if (!list) {
+    return;
+  }
 
-  int HvideoBox = 0;
-  int WvideoBox = 0;
-  for (int i = 0; i < 4; i++) {
-    HvideoBox = 0;
-    for (Video *j = list->head; j != NULL; j = j->next) {
-      Rectangle videoBox = {HvideoBox, WvideoBox, 250, 200};
-      DrawRectangleRec(videoBox, BLACK);
-      HvideoBox = HvideoBox + 30;
-    }
-    WvideoBox = WvideoBox + 30;
+  Video *current = list->head;
+  while (current != NULL) {
+    Video *next = current->next;
+    free(current);
+    current = next;
+  }
+
+  free(list);
+}
+
+void VideoDisplayer(VideoList *list) {
+    if (!list || !list->head) return; 
+
+    int HvideoBox = 0;
+    int WvideoBox = 0;
+    int col = 0;
+
+    for (Video *vid = list->head; vid != NULL; vid = vid->next) {
+        Rectangle videoBox = {WvideoBox, HvideoBox, 250, 200};
+        DrawRectangleRec(videoBox, BLACK);
+        WvideoBox += 260;
+        if (++col == 4) {
+            col = 0;
+            WvideoBox = 0;
+            HvideoBox += 210;
+        }
     }
 }
 
-void soundTime(Music music, struct screenSize screen)
-{
-    int timeLength = GetMusicTimeLength(music);
-    int timePlayed = GetMusicTimePlayed(music);
-    char timeInfo[100];
-    sprintf(timeInfo, "Time: %.2d / %.2d", timePlayed, timeLength);
+void soundTime(Music music, struct screenSize screen) {
+  int timeLength = GetMusicTimeLength(music);
+  int timePlayed = GetMusicTimePlayed(music);
+  char timeInfo[100];
+  sprintf(timeInfo, "Time: %.2d / %.2d", timePlayed, timeLength);
 
-    int textWidth = MeasureText(timeInfo, 20);
-    DrawText(timeInfo, (screen.Width - textWidth) / 2, screen.Heigth - 100, 20, DARKGRAY);
+  int textWidth = MeasureText(timeInfo, 20);
+  DrawText(timeInfo, (screen.Width - textWidth) / 2, screen.Heigth - 100, 20,
+           DARKGRAY);
 }
 
-Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCount, int16_t* framesCounter, bool* mouseOnText, bool* isFocused, int* cursorPos, VideoList** videoList)
+Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCount, int16_t* framesCounter, bool* mouseOnText, bool* isFocused, int* cursorPos, VideoList* list)
 {
-    Rectangle textBox = {screen.Width / 2.0f - 250, screen.Heigth - 50, 500, 30};
-    
+  Rectangle textBox = {screen.Width / 2.0f - 250, screen.Heigth - 50, 500, 30};
 
-    if (CheckCollisionPointRec(GetMousePosition(), textBox))
-    {
-        *mouseOnText = true;
-        SetMouseCursor(MOUSE_CURSOR_IBEAM);
-    }
-    else
-    {
-        *mouseOnText = false;
-    }
+  if (CheckCollisionPointRec(GetMousePosition(), textBox)) {
+    *mouseOnText = true;
+    SetMouseCursor(MOUSE_CURSOR_IBEAM);
+  } else {
+    *mouseOnText = false;
+  }
 
     if (*mouseOnText && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
     {
@@ -196,7 +197,7 @@ Rectangle createTextBox(struct screenSize screen, char* url, int16_t* letterCoun
 
         if (IsKeyDown(KEY_ENTER))
         {
-          *videoList = videoNewDownload(url);
+          videoNewDownload(url, list);
         }
     }
     else
@@ -245,7 +246,14 @@ int main(void)
     bool isFocused = false;
     printf("someshitisgoingon");
     int cursorPos = 0;
-    VideoList* videoList = NULL;
+    VideoList *list = (VideoList *)malloc(sizeof(VideoList));
+    if (!list) {
+      printf("memmory allocation failed\n");
+      exit(1);
+    }
+
+    list->head = NULL;
+    list->tail = NULL;
 
     SetTargetFPS(60);
 
@@ -276,10 +284,10 @@ int main(void)
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        createTextBox(screen1, url, &letterCount, &framesCounter, &mouseOnText, &isFocused, &cursorPos, &videoList);
-
-        if (videoList) {
-          VideoDisplayer(videoList);
+        createTextBox(screen1, url, &letterCount, &framesCounter, &mouseOnText, &isFocused, &cursorPos, list);
+        //need to create the list properly and not set head and tail to null, if i do this shit will never work
+        if (list) {
+          VideoDisplayer(list);
         }
 
         soundTime(music, screen1);
