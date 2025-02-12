@@ -24,6 +24,7 @@ typedef struct Video
     char thumbFileName[128];
     struct Video* next;
     struct Video* prev;
+    Texture2D thumbnail;
 } Video;
 
 typedef struct VideoList {

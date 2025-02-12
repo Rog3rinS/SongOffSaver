@@ -26,6 +26,34 @@ void freeVideoList(VideoList *list) {
   free(list);
 }
 
+void LoadAndResizeTexture(Video *vid) {
+    if (vid->thumbnail.id == 0) {
+        printf("Loading image: %s\n", vid->thumbFileName);
+
+        Texture2D thumbnail = LoadTexture(vid->thumbFileName);
+        if (thumbnail.width == 0 || thumbnail.height == 0) {
+            //0 because opengl give 0 to textures that dont exit already, this means we will only load if doenst exist yet
+            printf("Failed to create texture from image: %s\n", vid->thumbFileName);
+            return;
+        }
+
+        int maxWidth = 250;
+        int maxHeight = 141;
+
+        if (thumbnail.width > maxWidth || thumbnail.height > maxHeight) {
+            Image image = LoadImageFromTexture(thumbnail);
+            ImageResize(&image, maxWidth, maxHeight);
+            Texture2D resizedThumbnail = LoadTextureFromImage(image);
+            UnloadTexture(thumbnail); 
+            UnloadImage(image); 
+
+            vid->thumbnail = resizedThumbnail; 
+        } else {
+            vid->thumbnail = thumbnail; 
+        }
+    }
+}
+
 void VideoDisplayer(VideoList *list) {
     if (!list || !list->head) return;
 
@@ -34,19 +62,13 @@ void VideoDisplayer(VideoList *list) {
     int col = 0;
 
     for (Video *vid = list->head; vid != NULL; vid = vid->next) {
-        printf("Loading image: %s\n", vid->thumbFileName);
+        LoadAndResizeTexture(vid);
 
-        Rectangle videoBox = {WvideoBox, HvideoBox, 250, 200};
+        Rectangle videoBox = {WvideoBox, HvideoBox, 250, 141};
         DrawRectangleRec(videoBox, BLACK);
 
-        if (strlen(vid->thumbFileName) > 0) {
-            Texture2D thumbnail = LoadTexture(vid->thumbFileName);
-            if (thumbnail.width == 0 || thumbnail.height == 0) {
-                printf("Failed to create texture from image: %s\n", vid->thumbFileName);
-                continue;
-            }
-
-          DrawTexture(thumbnail, 0, 0, WHITE);
+        if (vid->thumbnail.id != 0) {
+          DrawTexture(vid->thumbnail, WvideoBox, HvideoBox, WHITE);
         }
 
         WvideoBox += 260;
