@@ -54,8 +54,17 @@ void LoadAndResizeTexture(Video *vid) {
     }
 }
 
-void VideoDisplayer(VideoList *list) {
-    if (!list || !list->head) return;
+Music VideoDisplayer(VideoList *list) {
+    if (!list || !list->head) {
+      Music emptyMusic = {0};
+      return emptyMusic;
+    }
+
+    bool mouseOnVideo = false;
+    Video* selectedVideo = NULL;
+    static bool isMusicLoaded = false;
+    static Music music;
+    static bool isPlaying = false;
 
     int HvideoBox = 0;
     int WvideoBox = 0;
@@ -64,12 +73,23 @@ void VideoDisplayer(VideoList *list) {
     for (Video *vid = list->head; vid != NULL; vid = vid->next) {
         LoadAndResizeTexture(vid);
 
-        Rectangle videoBox = {WvideoBox, HvideoBox, 250, 141};
+        Rectangle videoBox = {WvideoBox, HvideoBox, 300, 300};
         DrawRectangleRec(videoBox, BLACK);
 
         if (vid->thumbnail.id != 0) {
           DrawTexture(vid->thumbnail, WvideoBox, HvideoBox, WHITE);
         }
+
+        if (CheckCollisionPointRec(GetMousePosition(), videoBox)) {
+          mouseOnVideo = true;
+          SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+        } else {
+          mouseOnVideo = false;
+        }
+
+        if (mouseOnVideo && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+          selectedVideo = vid;
+        } 
 
         WvideoBox += 260;
         if (++col == 4) {  
@@ -77,7 +97,30 @@ void VideoDisplayer(VideoList *list) {
             WvideoBox = 0;
             HvideoBox += 210; 
         }
+
+        if (selectedVideo) {
+          if (!isMusicLoaded) {
+          music = LoadMusicStream(vid->videoFileName);
+          PlayMusicStream(music);
+          isMusicLoaded = true;
+          }
+
+          if (IsKeyPressed(KEY_SPACE)) {
+            if (isPlaying) {
+              PauseMusicStream(music);
+              isPlaying = false;
+            } else {
+              ResumeMusicStream(music);
+              isPlaying = true;
+            }
+          }
+
+          UpdateMusicStream(music);
+
+        }
     }
+
+    return music;
 }
 
 void soundTime(Music music, struct screenSize screen) {
@@ -294,42 +337,26 @@ int main(void)
     SetTargetFPS(60);
 
     InitAudioDevice();
-    Music music = LoadMusicStream("");
-    PlayMusicStream(music);
-    SetMusicVolume(music, 0.3);
 
     //main loop
     while (!WindowShouldClose())
     {
-        UpdateMusicStream(music);
-
-        if (IsKeyPressed(KEY_SPACE))
-        {
-            if (IsMusicStreamPlaying(music))
-            {
-                PauseMusicStream(music);
-            }
-            else
-            {
-                ResumeMusicStream(music);
-            }
-        }
-
-
         //Draw -------------------------
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        createTextBox(screen1, url, &letterCount, &framesCounter, &mouseOnText, &isFocused, &cursorPos, list);
-        //need to create the list properly and not set head and tail to null, if i do this shit will never work
-        if (list) {
-          VideoDisplayer(list);
-        }
+        createTextBox(screen1, url, &letterCount, &framesCounter, &mouseOnText,
+                      &isFocused, &cursorPos, list);
+        // need to create the list properly and not set head and tail to null,
+        // if i do this shit will never work
 
+        Music music = VideoDisplayer(list);
         soundTime(music, screen1);
 
         EndDrawing();
     }
 
+    CloseAudioDevice();
+    CloseWindow();
     return 0;
 }

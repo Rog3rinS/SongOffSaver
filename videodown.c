@@ -52,6 +52,15 @@ void changeExtensionToPng(char* filename)
     }
 }
 
+void changeExtensionToWav(char* filename)
+{
+    char* dot = strrchr(filename, '.');
+    if (dot != NULL)
+    {
+        strcpy(dot, ".wav");
+    }
+}
+
 Video* videoCreate(char* videoUrl, VideoList* list)
 {
   Video *New_Video = (Video *)malloc(sizeof(Video));
@@ -90,7 +99,10 @@ int videoDownload(char* url, Video* video) {
     char command[MAX_URL_LEN];
     FILE* fp;
 
-    snprintf(command, sizeof(command), "yt-dlp -o \"data/%%(title)s.%%(ext)s\" --get-filename \"%s\"", url);
+    snprintf(command, sizeof(command),
+             "yt-dlp -x --audio-format wav -o \"data/%%(title)s.%%(ext)s\" "
+             "--get-filename \"%s\"",
+             url);
     fp = popen(command, "r");
     if (fp == NULL) {
         fprintf(stderr, "Failed to run command to get video filename\n");
@@ -99,6 +111,7 @@ int videoDownload(char* url, Video* video) {
 
     if (fgets(video->videoFileName, sizeof(video->videoFileName), fp) != NULL) {
         video->videoFileName[strcspn(video->videoFileName, "\n")] = '\0'; // Remove newline
+        changeExtensionToWav(video->videoFileName);
     } else {
         fprintf(stderr, "Failed to retrieve video filename\n");
         pclose(fp);
@@ -124,7 +137,10 @@ int videoDownload(char* url, Video* video) {
     pclose(fp);
 
     // Download the video and thumbnail
-    snprintf(command, sizeof(command), "yt-dlp -o \"data/%%(title)s.%%(ext)s\" --write-thumbnail --convert-thumbnails png \"%s\"", url);
+    snprintf(command, sizeof(command),
+             "yt-dlp -x --audio-format wav -o \"data/%%(title)s.%%(ext)s\" "
+             "--write-thumbnail --convert-thumbnails png \"%s\"",
+             url);
     printf("Downloading video and thumbnail: %s\n", command);
 
     int result = system(command);
